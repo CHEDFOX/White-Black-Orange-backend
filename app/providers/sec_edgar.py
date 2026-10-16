@@ -340,7 +340,17 @@ class SecEdgarProvider:
             if not tags:
                 log.info("sec_concept_unmapped", concept=concept)
                 continue
-            for tag in tags:
+            # Read every spelling, then resolve collisions by tag preference.
+            #
+            # Stopping at the first tag that yields anything silently truncates
+            # history, because issuers change tags mid-life. Tesla reported
+            # revenue as `Revenues` through FY2020 and as
+            # `RevenueFromContractWithCustomerExcludingAssessedTax` from FY2021:
+            # the preferred tag covers only the later years, so breaking there
+            # drops FY2019 and FY2020 entirely -- and drops them silently, as a
+            # concept absent from a period looks the same as one never reported.
+            best: dict[tuple, tuple[int, SecFact]] = {}
+            for rank, tag in enumerate(tags):
                 block = _find_tag(facts_root, tag)
                 if block is None:
                     continue
@@ -355,12 +365,22 @@ class SecEdgarProvider:
                             row=row,
                             acceptance_index=acceptance_index or {},
                         )
-                        if fact is not None:
-                            out.append(fact)
-                # First tag that produced anything wins; later tags for the same
-                # concept are alternate spellings, not additional data.
-                if any(f.source_concept == tag for f in out):
-                    break
+                        if fact is None:
+                            continue
+                        # One filing carrying a period under two spellings is a
+                        # duplicate, so the preferred tag wins. The same period
+                        # in a *later* filing is a revision and must survive,
+                        # which is why the accession is part of the key.
+                        key = (
+                            fact.period_start,
+                            fact.period_end,
+                            fact.accession,
+                            fact.unit,
+                        )
+                        current = best.get(key)
+                        if current is None or rank < current[0]:
+                            best[key] = (rank, fact)
+            out.extend(fact for _, fact in best.values())
 
         out.sort(key=lambda f: (f.concept, f.period_end, f.filed_date))
         return out

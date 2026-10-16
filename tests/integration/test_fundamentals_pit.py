@@ -338,6 +338,72 @@ class TestLoadFundamentals:
             "a series with a hole would compare non-adjacent periods as if adjacent"
         )
 
+    def test_a_growth_series_keeps_the_latest_unbroken_run(
+        self, db, instrument, issuer, source
+    ):
+        # TSLA's shape: revenue is absent for the earliest years and present
+        # for every year since. Discarding the concept entirely threw away
+        # three usable growth observations and left the bubble engine's
+        # divergence signal permanently unevaluable.
+        facts = [
+            fact("net_income", "5", period_start=dt.date(2019, 1, 1),
+                 period_end=dt.date(2019, 12, 31), filed=dt.date(2020, 2, 1),
+                 accession="a"),
+            fact("net_income", "7", period_start=dt.date(2020, 1, 1),
+                 period_end=dt.date(2020, 12, 31), filed=dt.date(2021, 2, 1),
+                 accession="b"),
+        ]
+        for year, value in ((2021, "100"), (2022, "120"), (2023, "150")):
+            facts.append(
+                fact("revenue", value, period_start=dt.date(year, 1, 1),
+                     period_end=dt.date(year, 12, 31),
+                     filed=dt.date(year + 1, 2, 1), accession=f"r{year}")
+            )
+            facts.append(
+                fact("net_income", "9", period_start=dt.date(year, 1, 1),
+                     period_end=dt.date(year, 12, 31),
+                     filed=dt.date(year + 1, 2, 1), accession=f"r{year}")
+            )
+        ingest_facts(db, issuer=issuer, facts=facts, data_source=source)
+        supersede_older_revisions(db, issuer.id)
+        snapshot = load_fundamentals(
+            db, instrument, as_of=AsOf(cutoff=dt.datetime(2025, 1, 1, tzinfo=UTC))
+        )
+
+        assert snapshot.series["revenue_by_period"] == [100.0, 120.0, 150.0], (
+            "the three adjacent years are usable even though earlier years "
+            "report no revenue"
+        )
+        assert len(snapshot.series["net_income_by_period"]) == 5
+        assert any("shortened" in note for note in snapshot.notes), (
+            "a shortened series must say so; silently serving fewer periods "
+            "than the caller asked for is the omission this platform forbids"
+        )
+
+    def test_a_hole_is_never_bridged(self, db, instrument, issuer, source):
+        # The run must stop at the gap, not skip over it: 2021 and 2023 are
+        # not adjacent, and treating them as adjacent would report a two-year
+        # change as one year's growth.
+        for year, value in ((2021, "100"), (2023, "150"), (2024, "160")):
+            ingest_facts(
+                db,
+                issuer=issuer,
+                facts=[
+                    fact("revenue", value, period_start=dt.date(year, 1, 1),
+                         period_end=dt.date(year, 12, 31),
+                         filed=dt.date(year + 1, 2, 1), accession=f"r{year}")
+                ],
+                data_source=source,
+            )
+        supersede_older_revisions(db, issuer.id)
+        snapshot = load_fundamentals(
+            db, instrument, as_of=AsOf(cutoff=dt.datetime(2026, 1, 1, tzinfo=UTC))
+        )
+
+        assert snapshot.series["revenue_by_period"] == [150.0, 160.0], (
+            "2021 sits the far side of a missing 2022 and must be excluded"
+        )
+
     def test_an_instrument_with_no_issuer_reports_why(self, db, instrument):
         instrument.issuer_id = None
         db.flush()

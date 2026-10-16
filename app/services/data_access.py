@@ -394,6 +394,34 @@ class FundamentalSnapshot:
         return not self.scalars and not self.series
 
 
+# Day ranges separating one period end from the next of the same kind. Wide
+# enough for 52/53-week fiscal calendars and for a period end moved by a few
+# days, narrow enough that a whole skipped period falls outside.
+_ADJACENT_PERIOD_DAYS: dict[str, tuple[int, int]] = {
+    "FY": (300, 430),
+    "9M": (240, 300),
+    "H": (150, 215),
+    "Q": (75, 110),
+}
+
+
+def _periods_are_adjacent(earlier: tuple, later: tuple) -> bool:
+    """True when ``later`` is the period immediately following ``earlier``.
+
+    Keys are ``(period_end, fiscal_year, period_kind)``. Periods of different
+    kinds are never consecutive observations of one series.
+    """
+    earlier_end, _, earlier_kind = earlier
+    later_end, _, later_kind = later
+    if earlier_kind != later_kind:
+        return False
+    bounds = _ADJACENT_PERIOD_DAYS.get(earlier_kind)
+    if bounds is None:
+        return False
+    gap = (later_end - earlier_end).days
+    return bounds[0] <= gap <= bounds[1]
+
+
 def load_fundamentals(
     session: Session,
     instrument: Instrument,
@@ -462,13 +490,43 @@ def load_fundamentals(
     snapshot.scalars = dict(by_period[ordered[-1]])
 
     concepts = {c for values in by_period.values() for c in values}
+    truncated: list[str] = []
     for concept in sorted(concepts):
         values = [by_period[k].get(concept) for k in ordered]
-        # Only build a growth series when every period has the concept. A
-        # series with holes would make consecutive-period growth compare
-        # non-adjacent periods.
-        if all(v is not None for v in values) and len(values) >= 2:
-            snapshot.series[f"{concept}_by_period"] = [float(v) for v in values]
+        # Keep the longest unbroken run ending at the most recent period.
+        #
+        # A series with holes must never be used, because consecutive-period
+        # growth would then compare non-adjacent periods. But discarding the
+        # whole series because one *early* period is missing throws away usable
+        # recent history: TSLA has revenue for the last five annual periods and
+        # a gap before them, which is five good growth observations, not none.
+        #
+        # Two kinds of hole exist and both have to stop the run. A period
+        # present but lacking the concept is the obvious one. The other is a
+        # period missing entirely -- it never enters ``ordered`` at all, so
+        # adjacent list entries can be years apart, and a two-year change would
+        # otherwise be reported as one year's growth.
+        run: list[float] = []
+        previous_key: tuple | None = None
+        for key in reversed(ordered):
+            value = by_period[key].get(concept)
+            if value is None:
+                break
+            if previous_key is not None and not _periods_are_adjacent(key, previous_key):
+                break
+            run.append(float(value))
+            previous_key = key
+        run.reverse()
+        if len(run) >= 2:
+            snapshot.series[f"{concept}_by_period"] = run
+            if len(run) < len(values):
+                truncated.append(f"{concept} ({len(run)} of {len(values)})")
+
+    if truncated:
+        snapshot.notes.append(
+            "growth series shortened to the most recent unbroken run of "
+            "adjacent periods: " + ", ".join(truncated)
+        )
 
     latest_filed = max(
         (f.available_at for f in facts if f.available_at), default=None

@@ -375,3 +375,79 @@ class TestBubbleAssessment:
     def test_bands_are_labels_not_false_precision(self):
         v = run_method("bubble_assessment", mk(parabolic(600))).values
         assert v["vulnerability_band"] in {"limited", "moderate", "elevated", "high"}
+
+
+class TestDerivedFundamentalScalars:
+    """The bubble engine reads derived fundamentals that nothing supplied.
+
+    ``valuation_extreme`` and ``fundamental_divergence`` are the two
+    highest-weighted signals of the ten. Both read keys like
+    ``price_to_earnings`` from ``scalars``, but the fundamentals snapshot
+    carries only raw reported facts, so both reported "unavailable" for every
+    instrument -- while the same API response displayed the very ratios they
+    needed. Six of ten signals formed every score.
+    """
+
+    @staticmethod
+    def snapshot(labels):
+        from app.services.data_access import FundamentalSnapshot
+
+        snap = FundamentalSnapshot()
+        snap.period_labels = list(labels)
+        return snap
+
+    def derive(self, data, labels=("2023 FY", "2024 FY")):
+        from app.services.analysis_service import _with_derived_fundamental_scalars
+
+        return _with_derived_fundamental_scalars(
+            data, dict(data.scalars), self.snapshot(labels)
+        )
+
+    def raw_facts(self):
+        return {
+            "net_income": 1_000_000.0,
+            "revenue": 10_000_000.0,
+            "shares_diluted": 1_000_000.0,
+            "stockholders_equity": 5_000_000.0,
+        }
+
+    def test_valuation_ratios_reach_the_signal(self):
+        data = mk(walk(300, seed=5), scalars=self.raw_facts())
+        enriched = self.derive(data)
+
+        # price * shares / net_income, with price the last close.
+        expected = (data.close[-1] * 1_000_000.0) / 1_000_000.0
+        assert enriched.scalars["price_to_earnings"] == pytest.approx(expected)
+        assert "price_to_sales" in enriched.scalars
+
+    def test_the_valuation_signal_stops_reporting_a_false_absence(self):
+        data = mk(walk(300, seed=5), scalars=self.raw_facts())
+        enriched = self.derive(data)
+
+        signals = {
+            s["key"]: s
+            for s in run_method("bubble_assessment", enriched).values["signals"]
+        }
+        assert signals["valuation_extreme"]["status"] != "unavailable", (
+            "the ratio is computable from the supplied facts, so claiming it "
+            "is missing is a false absence"
+        )
+
+    def test_growth_is_only_mapped_to_a_yearly_name_for_annual_periods(self):
+        from dataclasses import replace
+
+        series = {"revenue_by_period": [100.0, 130.0], "net_income_by_period": [9.0, 12.0]}
+        data = replace(mk(walk(300, seed=5), scalars=self.raw_facts()), series=series)
+
+        annual = self.derive(data, labels=("2023 FY", "2024 FY"))
+        assert annual.scalars["revenue_growth_1y"] == pytest.approx(0.30)
+
+        quarterly = self.derive(data, labels=("2024 Q", "2024 Q"))
+        assert "revenue_growth_1y" not in quarterly.scalars, (
+            "quarter-over-quarter growth under a name ending _1y would "
+            "misstate the period the figure covers"
+        )
+
+    def test_absent_fundamentals_leave_the_input_untouched(self):
+        data = mk(walk(300, seed=5))
+        assert self.derive(data, labels=()).scalars == data.scalars

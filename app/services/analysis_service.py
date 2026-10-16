@@ -10,7 +10,7 @@ than a list of direct calls.
 from __future__ import annotations
 
 import datetime as dt
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -332,6 +332,9 @@ def analyse(
         series=fundamentals.series,
     )
 
+    if "bubble_assessment" in method_keys:
+        data = _with_derived_fundamental_scalars(data, scalars, fundamentals)
+
     outcomes = run_methods(method_keys, data, params_by_method=params_by_method)
 
     bundle = AnalysisBundle(
@@ -357,6 +360,61 @@ def analyse(
     )
     bundle.disclosures = build_disclosures(bundle, as_of, series, fundamentals)
     return bundle
+
+
+# The bubble engine reads *derived* fundamentals by name, but the fundamentals
+# snapshot carries only raw reported facts, so nothing ever supplied these keys.
+# The two signals that need them are the two highest-weighted of the ten, and
+# both reported "unavailable" for every instrument while the same API response
+# showed the very ratios they were asking for.
+_VALUATION_SCALARS = ("price_to_earnings", "price_to_sales")
+# growth_trajectory reports period-over-period growth. Mapping it to a name
+# ending in `_1y` is only honest when the periods really are annual.
+_GROWTH_SCALARS = {
+    "revenue_growth_latest": "revenue_growth_1y",
+    "net_income_growth_latest": "earnings_growth_1y",
+}
+
+
+def _with_derived_fundamental_scalars(
+    data: MethodInput,
+    scalars: dict[str, float],
+    fundamentals: FundamentalSnapshot,
+) -> MethodInput:
+    """Add the derived ratios and growth rates the bubble signals read.
+
+    Computed by running the same registered methods that produce the numbers
+    shown to the reader, so a signal can never disagree with the valuation
+    table next to it.
+    """
+    derived = dict(scalars)
+
+    try:
+        ratios = run_method("valuation_ratios", data).values
+    except (InsufficientDataError, PlatformError):
+        ratios = {}
+    for key in _VALUATION_SCALARS:
+        value = ratios.get(key)
+        if value is not None:
+            derived[key] = float(value)
+
+    annual = bool(fundamentals.period_labels) and all(
+        label.endswith(" FY") for label in fundamentals.period_labels
+    )
+    if annual:
+        try:
+            growth = run_method("growth_trajectory", data).values
+        except (InsufficientDataError, PlatformError):
+            growth = {}
+        for source, target in _GROWTH_SCALARS.items():
+            value = growth.get(source)
+            if value is not None:
+                derived[target] = float(value)
+
+    if derived == scalars:
+        return data
+
+    return replace(data, scalars=derived)
 
 
 def _annualised_vol(series: SeriesBundle) -> float:
