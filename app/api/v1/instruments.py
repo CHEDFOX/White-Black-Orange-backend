@@ -114,6 +114,73 @@ def search(
     )
 
 
+class ListResponse(ApiModel):
+    instruments: list[InstrumentSummary]
+    returned: int
+    total: int
+    note: str | None = None
+
+
+@router.get("", response_model=ListResponse, summary="List ingested instruments")
+def list_instruments(
+    only_with_prices: bool = Query(
+        default=True,
+        description="Restrict to instruments that actually have price history.",
+    ),
+    instrument_type: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+) -> ListResponse:
+    """Every instrument in the registry.
+
+    The registry holds what has been ingested, not a global universe, so this
+    is the honest answer to "what can I analyse here?" -- which a search
+    endpoint cannot give.
+    """
+    from sqlalchemy import func as sa_func
+    from sqlalchemy import select
+
+    from app.db.models.instrument import Instrument as InstrumentModel
+
+    stmt = select(InstrumentModel)
+    count_stmt = select(sa_func.count()).select_from(InstrumentModel)
+    if instrument_type:
+        stmt = stmt.where(InstrumentModel.instrument_type == instrument_type)
+        count_stmt = count_stmt.where(
+            InstrumentModel.instrument_type == instrument_type
+        )
+    if only_with_prices:
+        from app.db.models.instrument import InstrumentCoverage as Coverage
+
+        has_prices = (
+            select(Coverage.instrument_id)
+            .where(Coverage.data_kind == "prices", Coverage.observation_count > 0)
+            .distinct()
+            .scalar_subquery()
+        )
+        stmt = stmt.where(InstrumentModel.id.in_(has_prices))
+        count_stmt = count_stmt.where(InstrumentModel.id.in_(has_prices))
+
+    total = db.execute(count_stmt).scalar_one()
+    rows = db.execute(
+        stmt.order_by(InstrumentModel.symbol).limit(limit).offset(offset)
+    ).scalars().all()
+
+    note = None
+    if total == 0:
+        note = (
+            "The registry is empty. Run the backend's seed script to ingest "
+            "price history, fundamentals and macro series."
+        )
+    return ListResponse(
+        instruments=[_summary(i) for i in rows],
+        returned=len(rows),
+        total=total,
+        note=note,
+    )
+
+
 @router.get("/{identifier}", response_model=InstrumentDetail, summary="Instrument detail")
 def detail(
     identifier: str,

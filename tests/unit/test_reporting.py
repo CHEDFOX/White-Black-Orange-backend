@@ -177,6 +177,23 @@ class TestReportGeneration:
                 f"finding in {finding.section} asserts something with no evidence"
             )
 
+    def test_volatility_is_rendered_unsigned(self):
+        """A volatility of "+35.6%" implies it could be negative. It cannot.
+
+        Signed rendering is correct for a return and wrong for a standard
+        deviation, so the two use different formatters.
+        """
+        report = generate_report(bundle_with(dict(FULL_OUTCOMES)))
+        vol = next(f for f in report.findings if f.section == "volatility")
+        assert "+" not in vol.conclusion, vol.conclusion
+        assert "24.1%" in vol.conclusion
+        assert "annualised volatility was 24.1%" in report.summary
+
+    def test_returns_are_still_rendered_signed(self):
+        report = generate_report(bundle_with(dict(FULL_OUTCOMES)))
+        perf = next(f for f in report.findings if f.section == "performance")
+        assert "+18.3%" in perf.conclusion, perf.conclusion
+
     def test_the_summary_counts_the_claim_kinds_it_contains(self):
         report = generate_report(bundle_with(dict(FULL_OUTCOMES)))
         assert "This report contains" in report.summary

@@ -39,7 +39,19 @@ log = get_logger(__name__)
 
 
 def _pct(value: float | None, digits: int = 1) -> str:
+    """Signed percentage, for a quantity that can go either way."""
     return "n/a" if value is None else f"{value * 100:+.{digits}f}%"
+
+
+def _pct_unsigned(value: float | None, digits: int = 1) -> str:
+    """Unsigned percentage, for a quantity that cannot be negative.
+
+    Volatility, a standard deviation and a coverage rate are non-negative by
+    definition. Rendering one as "+35.6%" implies it could be -35.6%, which is
+    not a thing, and invites the reader to look for a direction that is not
+    there.
+    """
+    return "n/a" if value is None else f"{value * 100:.{digits}f}%"
 
 
 def _num(value: float | None, digits: int = 2) -> str:
@@ -223,7 +235,8 @@ def _volatility_findings(bundle: AnalysisBundle) -> list[Finding]:
             section="volatility",
             conclusion=(
                 f"Annualised realised volatility over the window was "
-                f"{_pct(annualised, 1)}, {_confidence_from_observations(vol.observations_used)}."
+                f"{_pct_unsigned(annualised, 1)}, "
+                f"{_confidence_from_observations(vol.observations_used)}."
             ),
             claim_kind=ClaimKind.DETERMINISTIC_CALCULATION,
             confidence_label=_confidence_from_observations(vol.observations_used),
@@ -790,7 +803,8 @@ def _build_summary(bundle: AnalysisBundle, findings: list[Finding]) -> str:
         )
     if vol and vol.ok:
         parts.append(
-            f"annualised volatility was {_pct(vol.values.get('annualised_volatility'))}"
+            "annualised volatility was "
+            f"{_pct_unsigned(vol.values.get('annualised_volatility'))}"
         )
     if regime and regime.ok:
         parts.append(
