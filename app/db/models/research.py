@@ -39,7 +39,7 @@ from app.db.models.enums import (
     RegimeLabel,
     ValidationStatus,
 )
-from app.db.types import JSONType, RatioNumeric
+from app.db.types import FactNumeric, JSONType
 
 
 class MethodDefinition(Base, TimestampMixin):
@@ -106,7 +106,7 @@ class ComputedFeature(Base):
     params: Mapped[dict] = mapped_column(JSONType, default=dict)
     params_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
-    value: Mapped[decimal.Decimal | None] = mapped_column(RatioNumeric)
+    value: Mapped[decimal.Decimal | None] = mapped_column(FactNumeric)
     values: Mapped[dict | None] = mapped_column(JSONType)
     observations_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     input_window_start: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
@@ -275,7 +275,7 @@ class Forecast(Base):
     distribution_family: Mapped[str | None] = mapped_column(String(40))
     distribution_params: Mapped[dict] = mapped_column(JSONType, default=dict)
 
-    base_price: Mapped[decimal.Decimal | None] = mapped_column(RatioNumeric)
+    base_price: Mapped[decimal.Decimal | None] = mapped_column(FactNumeric)
     contributing_factors: Mapped[list] = mapped_column(JSONType, default=list)
     assumptions: Mapped[list] = mapped_column(JSONType, default=list)
     invalidation_conditions: Mapped[list] = mapped_column(JSONType, default=list)

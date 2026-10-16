@@ -20,7 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
 from app.db.models.mixins import PointInTimeMixin
-from app.db.types import JSONType, RatioNumeric
+from app.db.types import FactNumeric, JSONType
 
 
 class EconomicSeries(Base, TimestampMixin):
@@ -101,7 +101,7 @@ class EconomicObservation(Base, PointInTimeMixin):
     release_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("economic_releases.id", ondelete="SET NULL")
     )
-    value: Mapped[decimal.Decimal | None] = mapped_column(RatioNumeric)
+    value: Mapped[decimal.Decimal | None] = mapped_column(FactNumeric)
     unit: Mapped[str] = mapped_column(String(64), nullable=False)
     raw_payload: Mapped[dict | None] = mapped_column(JSONType)
 

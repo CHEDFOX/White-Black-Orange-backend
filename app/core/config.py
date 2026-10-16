@@ -85,7 +85,8 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 2000
 
     # --- analysis defaults ---------------------------------------------------
-    default_benchmark_ticker: str = "SPY"
+    # VTI rather than SPY: the EODHD demo token serves VTI.US but not SPY.US.
+    default_benchmark_ticker: str = "VTI"
     min_bars_for_analysis: int = 30
     similarity_window_bars: int = 60
     trading_days_per_year: int = 252
