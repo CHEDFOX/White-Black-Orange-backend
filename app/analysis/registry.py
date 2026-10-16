@@ -139,7 +139,14 @@ def _ensure_loaded() -> None:
     # Set the flag first: the method modules import this one, so a re-entrant
     # call during their import must not recurse.
     _LOADED = True
-    from app.analysis import fundamental, regime, statistics, technical  # noqa: F401
+    from app.analysis import (  # noqa: F401
+        bubble,
+        fundamental,
+        regime,
+        risk,
+        statistics,
+        technical,
+    )
 
 
 def register_method(spec: MethodSpec) -> Callable[[MethodFn], MethodFn]:
