@@ -1,0 +1,97 @@
+# Local development stack.
+#
+# `docker compose up` brings up PostgreSQL, Redis, the API and a worker. The
+# API waits for a healthy database rather than racing it, and migrations run in
+# a one-shot service so two API replicas cannot apply them concurrently.
+
+name: stock-intelligence
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sip
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sip"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/sip
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/sip
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+      LOG_JSON: "true"
+      # The EODHD "demo" token serves a fixed handful of symbols, so the stack
+      # has real data with no signup. Set a real key for full coverage.
+      EODHD_API_KEY: ${EODHD_API_KEY:-demo}
+      # The SEC requires a descriptive User-Agent with real contact details.
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-StockIntelligencePlatform/0.1 (set SEC_USER_AGENT)}
+      # Without a FRED key only the latest revision of each macro series is
+      # available, and the platform discloses that per series.
+      FRED_API_KEY: ${FRED_API_KEY:-}
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    command: ["celery", "-A", "app.jobs.celery_app", "worker", "--loglevel=info"]
+    environment:
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/sip
+      REDIS_URL: redis://redis:6379/0
+      EODHD_API_KEY: ${EODHD_API_KEY:-demo}
+      SEC_USER_AGENT: ${SEC_USER_AGENT:-StockIntelligencePlatform/0.1 (set SEC_USER_AGENT)}
+      FRED_API_KEY: ${FRED_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
