@@ -54,7 +54,7 @@ class FiscalPeriod(Base):
     # compared to one with a December year-end without pretending they match.
     calendar_quarter_end: Mapped[dt.date | None] = mapped_column(Date)
 
-    facts: Mapped[list["FinancialFact"]] = relationship(back_populates="period")
+    facts: Mapped[list[FinancialFact]] = relationship(back_populates="period")
 
 
 class Filing(Base, PointInTimeMixin):

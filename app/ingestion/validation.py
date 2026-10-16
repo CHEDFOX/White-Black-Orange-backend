@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import datetime as dt
 import decimal
+import itertools
 import math
 from collections import Counter
 from dataclasses import dataclass, field
@@ -229,7 +230,7 @@ def find_outlier_returns(
     """
     findings: list[ValidationFinding] = []
     ordered = sorted(bars, key=lambda b: b.event_time)
-    for prev, cur in zip(ordered, ordered[1:], strict=False):
+    for prev, cur in itertools.pairwise(ordered):
         if prev.close <= 0 or cur.close <= 0:
             continue
         ratio = float(cur.close / prev.close)

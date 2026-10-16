@@ -385,7 +385,11 @@ class YahooChartProvider(MarketDataProvider):
             # Daily bars become available after the session closes and the
             # consolidated tape settles. One hour is a conservative, documented
             # assumption, not a measured figure.
-            availability_lag=dt.timedelta(hours=1) if resolution in {"1d", "1wk", "1mo"} else dt.timedelta(minutes=1),
+            availability_lag=(
+                dt.timedelta(hours=1)
+                if resolution in {"1d", "1wk", "1mo"}
+                else dt.timedelta(minutes=1)
+            ),
             requested_start=start,
             requested_end=end,
             truncated=False,

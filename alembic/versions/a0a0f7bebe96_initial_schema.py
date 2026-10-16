@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: cf206cfe08e1
+Revision ID: a0a0f7bebe96
 Revises: 
-Create Date: 2026-10-16 06:26:29.048072
+Create Date: 2026-10-16 06:51:43.175382
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-revision: str = 'cf206cfe08e1'
+revision: str = 'a0a0f7bebe96'
 down_revision: str | None = None
 branch_labels = None
 depends_on = None
@@ -707,7 +707,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['data_source_id'], ['data_sources.id'], name=op.f('fk_instrument_identifiers_data_source_id_data_sources'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['instrument_id'], ['instruments.id'], name=op.f('fk_instrument_identifiers_instrument_id_instruments'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_instrument_identifiers')),
-    sa.UniqueConstraint('data_source_id', 'identifier', name='uq_instrument_identifiers_data_source_id_identifier')
+    sa.UniqueConstraint('data_source_id', 'identifier', name='uq_instrument_identifiers_source_identifier')
     )
     op.create_index('ix_instrument_identifiers_instrument', 'instrument_identifiers', ['instrument_id', 'data_source_id'], unique=False)
     op.create_table('instrument_tickers',
@@ -720,7 +720,7 @@ def upgrade() -> None:
     sa.Column('note', sa.Text(), nullable=True),
     sa.ForeignKeyConstraint(['instrument_id'], ['instruments.id'], name=op.f('fk_instrument_tickers_instrument_id_instruments'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_instrument_tickers')),
-    sa.UniqueConstraint('instrument_id', 'symbol', 'valid_from', name='uq_instrument_tickers_instrument_id_symbol_valid_from')
+    sa.UniqueConstraint('instrument_id', 'symbol', 'valid_from', name='uq_instrument_tickers_instrument_symbol_valid_from')
     )
     op.create_index(op.f('ix_instrument_tickers_instrument_id'), 'instrument_tickers', ['instrument_id'], unique=False)
     op.create_index('ix_instrument_tickers_symbol_range', 'instrument_tickers', ['symbol', 'valid_from', 'valid_to'], unique=False)
@@ -749,7 +749,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['group_id'], ['peer_groups.id'], name=op.f('fk_peer_group_members_group_id_peer_groups'), ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['instrument_id'], ['instruments.id'], name=op.f('fk_peer_group_members_instrument_id_instruments'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_peer_group_members')),
-    sa.UniqueConstraint('group_id', 'instrument_id', 'valid_from', name='uq_peer_group_members_group_id_instrument_id_valid_from')
+    sa.UniqueConstraint('group_id', 'instrument_id', 'valid_from', name='uq_peer_group_members_group_instrument_valid_from')
     )
     op.create_index(op.f('ix_peer_group_members_instrument_id'), 'peer_group_members', ['instrument_id'], unique=False)
     op.create_table('price_bars',

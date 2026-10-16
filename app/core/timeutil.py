@@ -12,7 +12,7 @@ import datetime as dt
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
-UTC = dt.timezone.utc
+UTC = dt.UTC
 
 # Resolution identifiers used across the platform. Minute-level identifiers are
 # accepted by the schema, but a resolution is only "supported" for an instrument

@@ -29,7 +29,7 @@ import datetime as dt
 import uuid
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
-from sqlalchemy.orm import Mapped, mapped_column, declared_attr
+from sqlalchemy.orm import Mapped, declared_attr, mapped_column
 
 from app.db.models.enums import DataClassification
 

@@ -143,7 +143,7 @@ class GeneratedReport(Base):
         String(16), nullable=False, default=DataClassification.PRODUCTION
     )
 
-    findings: Mapped[list["ReportFinding"]] = relationship(
+    findings: Mapped[list[ReportFinding]] = relationship(
         back_populates="report", cascade="all, delete-orphan", order_by="ReportFinding.ordinal"
     )
 
@@ -169,7 +169,7 @@ class ReportFinding(Base):
     calculations: Mapped[list] = mapped_column(JSONType, default=list)
 
     report: Mapped[GeneratedReport] = relationship(back_populates="findings")
-    evidence: Mapped[list["ReportEvidence"]] = relationship(
+    evidence: Mapped[list[ReportEvidence]] = relationship(
         back_populates="finding", cascade="all, delete-orphan"
     )
 

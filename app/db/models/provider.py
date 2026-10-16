@@ -35,7 +35,8 @@ class DataSource(Base, TimestampMixin):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    kind: Mapped[str] = mapped_column(String(32), nullable=False)  # market_data|macro|filings|news|synthetic
+    # market_data | macro | filings | news | synthetic
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
     homepage_url: Mapped[str | None] = mapped_column(String(500))
     classification: Mapped[str] = mapped_column(
         String(16), nullable=False, default=DataClassification.PRODUCTION
@@ -54,7 +55,7 @@ class DataSource(Base, TimestampMixin):
     priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
     config: Mapped[dict] = mapped_column(JSONType, default=dict)
 
-    health_checks: Mapped[list["ProviderHealthCheck"]] = relationship(
+    health_checks: Mapped[list[ProviderHealthCheck]] = relationship(
         back_populates="data_source", cascade="all, delete-orphan"
     )
 

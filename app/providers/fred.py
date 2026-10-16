@@ -166,7 +166,9 @@ class MacroObservation:
 class FredProvider:
     """FRED adapter. Not a ``MarketDataProvider``: it serves macro series only."""
 
-    def __init__(self, client: ProviderHttpClient | None = None, api_key: str | None = None) -> None:
+    def __init__(
+        self, client: ProviderHttpClient | None = None, api_key: str | None = None
+    ) -> None:
         self.api_key = api_key if api_key is not None else settings.fred_api_key
         self._csv_client = client or ProviderHttpClient(
             base_url=settings.fred_base_url,

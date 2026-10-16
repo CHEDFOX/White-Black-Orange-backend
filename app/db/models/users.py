@@ -30,7 +30,7 @@ class AppUser(Base, TimestampMixin):
     display_name: Mapped[str | None] = mapped_column(String(200))
     preferences: Mapped[dict] = mapped_column(JSONType, default=dict)
 
-    watchlists: Mapped[list["Watchlist"]] = relationship(
+    watchlists: Mapped[list[Watchlist]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -49,7 +49,7 @@ class Watchlist(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
 
     user: Mapped[AppUser] = relationship(back_populates="watchlists")
-    items: Mapped[list["WatchlistItem"]] = relationship(
+    items: Mapped[list[WatchlistItem]] = relationship(
         back_populates="watchlist", cascade="all, delete-orphan", order_by="WatchlistItem.position"
     )
 

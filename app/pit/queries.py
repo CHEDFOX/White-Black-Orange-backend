@@ -16,13 +16,13 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.enums import AdjustmentBasis
-from app.db.models.fundamentals import FinancialFact, Filing
+from app.db.models.fundamentals import Filing, FinancialFact
 from app.db.models.instrument import Instrument, InstrumentTicker
 from app.db.models.macro import EconomicObservation, EconomicSeries
 from app.db.models.market_data import PriceBar
 from app.db.models.news import CorporateEvent, NewsArticle, NewsEntityLink
 from app.db.models.provider import DataSource
-from app.pit.availability import AsOf, PitCoverage, apply_pit, visible_at
+from app.pit.availability import AsOf, PitCoverage, apply_pit
 
 
 @dataclass

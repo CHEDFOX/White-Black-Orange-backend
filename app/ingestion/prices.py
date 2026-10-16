@@ -32,8 +32,6 @@ from app.core.logging import get_logger
 from app.core.timeutil import now_utc
 from app.db.models.enums import (
     DataClassification,
-    DataQualityKind,
-    DataQualitySeverity,
     JobStatus,
 )
 from app.db.models.instrument import Instrument
@@ -409,7 +407,7 @@ def backfill_prices(
         "bars_unchanged": combined.bars_unchanged,
         "bars_revised": combined.bars_revised,
         "gaps_recorded": combined.gaps_recorded,
-        "findings": {k: v for k, v in _finding_counts(combined).items()},
+        "findings": dict(_finding_counts(combined)),
     }
     session.flush()
     return combined
@@ -446,10 +444,11 @@ def incremental_update(
     ).scalars().first()
 
     end = now_utc()
-    if last is None:
-        start = end - dt.timedelta(days=365)
-    else:
-        start = last - dt.timedelta(days=overlap_days)
+    start = (
+        end - dt.timedelta(days=365)
+        if last is None
+        else last - dt.timedelta(days=overlap_days)
+    )
 
     return backfill_prices(
         session,

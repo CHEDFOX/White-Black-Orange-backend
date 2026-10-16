@@ -139,7 +139,9 @@ class RegimeEstimate(Base):
     method_version: Mapped[str] = mapped_column(String(20), nullable=False)
     window_start: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     window_end: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    label: Mapped[str] = mapped_column(String(20), nullable=False, default=RegimeLabel.INDETERMINATE)
+    label: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=RegimeLabel.INDETERMINATE
+    )
     confidence: Mapped[float | None] = mapped_column(Float)
     label_probabilities: Mapped[dict] = mapped_column(JSONType, default=dict)
     diagnostics: Mapped[dict] = mapped_column(JSONType, default=dict)
@@ -205,7 +207,9 @@ class ModelDefinition(Base, TimestampMixin):
     family: Mapped[str] = mapped_column(String(40), nullable=False)
     display_name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    target: Mapped[str] = mapped_column(String(24), nullable=False, default=ForecastTarget.LOG_RETURN)
+    target: Mapped[str] = mapped_column(
+        String(24), nullable=False, default=ForecastTarget.LOG_RETURN
+    )
     supported_horizons: Mapped[list] = mapped_column(JSONType, default=list)
     hyperparameters: Mapped[dict] = mapped_column(JSONType, default=dict)
     is_baseline: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -217,7 +221,7 @@ class ModelDefinition(Base, TimestampMixin):
     min_observations: Mapped[int] = mapped_column(Integer, default=60)
     code_fingerprint: Mapped[str | None] = mapped_column(String(64))
 
-    forecasts: Mapped[list["Forecast"]] = relationship(back_populates="model")
+    forecasts: Mapped[list[Forecast]] = relationship(back_populates="model")
 
 
 class Forecast(Base):
@@ -289,7 +293,7 @@ class Forecast(Base):
     )
 
     model: Mapped[ModelDefinition] = relationship(back_populates="forecasts")
-    outcome: Mapped["ForecastOutcome | None"] = relationship(
+    outcome: Mapped[ForecastOutcome | None] = relationship(
         back_populates="forecast", uselist=False
     )
 

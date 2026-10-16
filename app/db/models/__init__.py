@@ -17,8 +17,8 @@ from app.db.models.enums import (
     DataClassification,
     DataQualityKind,
     DataQualitySeverity,
-    EvidenceStance,
     EventCategory,
+    EvidenceStance,
     ForecastTarget,
     InstrumentType,
     JobStatus,
@@ -26,7 +26,7 @@ from app.db.models.enums import (
     RegimeLabel,
     ValidationStatus,
 )
-from app.db.models.fundamentals import FinancialFact, Filing, FiscalPeriod
+from app.db.models.fundamentals import Filing, FinancialFact, FiscalPeriod
 from app.db.models.instrument import (
     Instrument,
     InstrumentCoverage,
@@ -80,8 +80,8 @@ __all__ = [
     "EconomicObservation",
     "EconomicRelease",
     "EconomicSeries",
-    "EvidenceStance",
     "EventCategory",
+    "EvidenceStance",
     "ExtractedClaim",
     "Filing",
     "FinancialFact",

@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 
 from app.core.calendars import get_calendar
 from app.core.errors import UnsupportedError
-from app.core.timeutil import UTC, ensure_utc, now_utc, resolution_seconds
+from app.core.timeutil import ensure_utc, now_utc, resolution_seconds
 from app.db.models.enums import AdjustmentBasis, CorporateActionType, InstrumentType
 from app.providers.base import (
     BarBatch,

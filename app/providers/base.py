@@ -31,7 +31,8 @@ class ProviderCapabilities:
 
     provider_key: str
     display_name: str
-    kinds: frozenset[str]  # {"prices", "corporate_actions", "fundamentals", "macro", "news", "quotes"}
+    # Any of: prices, corporate_actions, fundamentals, macro, news, quotes
+    kinds: frozenset[str]
     resolutions: frozenset[str]
     adjustment_bases: frozenset[str]
     instrument_types: frozenset[str]
@@ -210,7 +211,9 @@ class MarketDataProvider(abc.ABC):
         """
 
     @abc.abstractmethod
-    def resolve_instrument(self, symbol: str, *, exchange_hint: str | None = None) -> ProviderInstrument | None:
+    def resolve_instrument(
+        self, symbol: str, *, exchange_hint: str | None = None
+    ) -> ProviderInstrument | None:
         """Return provider metadata for a symbol, or None when unknown."""
 
     @abc.abstractmethod

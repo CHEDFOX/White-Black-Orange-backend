@@ -74,10 +74,10 @@ class NewsArticle(Base, PointInTimeMixin):
 
     raw_payload: Mapped[dict | None] = mapped_column(JSONType)
 
-    entities: Mapped[list["NewsEntityLink"]] = relationship(
+    entities: Mapped[list[NewsEntityLink]] = relationship(
         back_populates="article", cascade="all, delete-orphan"
     )
-    claims: Mapped[list["ExtractedClaim"]] = relationship(
+    claims: Mapped[list[ExtractedClaim]] = relationship(
         back_populates="article", cascade="all, delete-orphan"
     )
 

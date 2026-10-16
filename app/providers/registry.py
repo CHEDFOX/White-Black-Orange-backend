@@ -7,6 +7,7 @@ unmet is skipped with a logged reason rather than failing at first use, so the
 
 from __future__ import annotations
 
+import contextlib
 import threading
 from collections.abc import Callable, Iterable
 
@@ -48,9 +49,12 @@ def _bootstrap() -> None:
     if _FACTORIES:
         return
 
-    from app.providers.eodhd import CAPABILITIES as EODHD_CAPS, EodhdProvider
-    from app.providers.fixture import CAPABILITIES as FIXTURE_CAPS, FixtureProvider
-    from app.providers.yahoo import CAPABILITIES as YAHOO_CAPS, YahooChartProvider
+    from app.providers.eodhd import CAPABILITIES as EODHD_CAPS
+    from app.providers.eodhd import EodhdProvider
+    from app.providers.fixture import CAPABILITIES as FIXTURE_CAPS
+    from app.providers.fixture import FixtureProvider
+    from app.providers.yahoo import CAPABILITIES as YAHOO_CAPS
+    from app.providers.yahoo import YahooChartProvider
 
     register_provider(
         "eodhd",
@@ -149,8 +153,8 @@ def reset_instances() -> None:
     """Dispose cached adapters. Used between tests."""
     with _lock:
         for instance in _instances.values():
-            try:
+            # Best effort: a failure to close one adapter must not leave the
+            # rest cached for the next test.
+            with contextlib.suppress(Exception):
                 instance.close()
-            except Exception:  # pragma: no cover - best effort
-                pass
         _instances.clear()

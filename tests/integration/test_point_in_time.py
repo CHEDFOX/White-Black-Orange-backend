@@ -13,10 +13,9 @@ import pytest
 from sqlalchemy import select
 
 from app.core.errors import LookAheadError
-from app.core.timeutil import UTC
-from app.db.models.enums import AdjustmentBasis, DataClassification
+from app.db.models.enums import DataClassification
 from app.db.models.market_data import PriceBar
-from app.pit.availability import AsOf, assert_no_future_rows, visible_at
+from app.pit.availability import AsOf, assert_no_future_rows
 from app.pit.queries import price_bars_as_of, resolve_symbol_at
 from tests.integration.conftest import add_price_bar, utc
 
@@ -215,9 +214,9 @@ class TestSymbolResolution:
         rows = db.execute(
             select(InstrumentTicker).where(InstrumentTicker.instrument_id == instrument.id)
         ).scalars().all()
-        newsym = [r for r in rows if r.symbol == "NEWSYM"][0]
+        newsym = next(r for r in rows if r.symbol == "NEWSYM")
         assert newsym.valid_from == dt.date(2022, 6, 9)
-        old = [r for r in rows if r.symbol == "TEST"][0]
+        old = next(r for r in rows if r.symbol == "TEST")
         assert old.valid_to == dt.date(2022, 6, 8), "the old ticker's range must close"
 
 

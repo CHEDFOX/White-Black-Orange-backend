@@ -180,7 +180,9 @@ def split_symbol(symbol: str) -> tuple[str, str]:
 class EodhdProvider(MarketDataProvider):
     capabilities = CAPABILITIES
 
-    def __init__(self, client: ProviderHttpClient | None = None, api_key: str | None = None) -> None:
+    def __init__(
+        self, client: ProviderHttpClient | None = None, api_key: str | None = None
+    ) -> None:
         self.api_key = api_key or settings.eodhd_api_key
         self._client = client or ProviderHttpClient(
             base_url=settings.eodhd_base_url,
@@ -595,7 +597,9 @@ class EodhdProvider(MarketDataProvider):
             out.append(
                 ProviderCorporateAction(
                     action_type=(
-                        CorporateActionType.SPLIT if num >= den else CorporateActionType.REVERSE_SPLIT
+                        CorporateActionType.SPLIT
+                        if num >= den
+                        else CorporateActionType.REVERSE_SPLIT
                     ),
                     ex_date=ex_date,
                     ratio_numerator=num,

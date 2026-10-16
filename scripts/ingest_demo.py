@@ -11,7 +11,7 @@ import datetime as dt
 import sys
 
 from app.core.logging import get_logger
-from app.core.timeutil import UTC, now_utc
+from app.core.timeutil import now_utc
 from app.db.models.enums import AdjustmentBasis
 from app.db.session import session_scope
 from app.ingestion.instruments import register_instrument, upsert_issuer

@@ -48,7 +48,7 @@ class Issuer(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text)
     fiscal_year_end_month: Mapped[int | None] = mapped_column(Integer)
 
-    instruments: Mapped[list["Instrument"]] = relationship(back_populates="issuer")
+    instruments: Mapped[list[Instrument]] = relationship(back_populates="issuer")
 
 
 class Instrument(Base, TimestampMixin):
@@ -97,13 +97,13 @@ class Instrument(Base, TimestampMixin):
     metadata_json: Mapped[dict] = mapped_column(JSONType, default=dict)
 
     issuer: Mapped[Issuer | None] = relationship(back_populates="instruments")
-    identifiers: Mapped[list["InstrumentIdentifier"]] = relationship(
+    identifiers: Mapped[list[InstrumentIdentifier]] = relationship(
         back_populates="instrument", cascade="all, delete-orphan"
     )
-    tickers: Mapped[list["InstrumentTicker"]] = relationship(
+    tickers: Mapped[list[InstrumentTicker]] = relationship(
         back_populates="instrument", cascade="all, delete-orphan"
     )
-    coverage: Mapped[list["InstrumentCoverage"]] = relationship(
+    coverage: Mapped[list[InstrumentCoverage]] = relationship(
         back_populates="instrument", cascade="all, delete-orphan"
     )
 
@@ -122,7 +122,10 @@ class InstrumentTicker(Base):
     __tablename__ = "instrument_tickers"
     __table_args__ = (
         UniqueConstraint(
-            "instrument_id", "symbol", "valid_from", name="uq_instrument_tickers_instrument_id_symbol_valid_from"
+            "instrument_id",
+            "symbol",
+            "valid_from",
+            name="uq_instrument_tickers_instrument_symbol_valid_from",
         ),
         Index("ix_instrument_tickers_symbol_range", "symbol", "valid_from", "valid_to"),
     )
@@ -146,7 +149,9 @@ class InstrumentIdentifier(Base):
     __tablename__ = "instrument_identifiers"
     __table_args__ = (
         UniqueConstraint(
-            "data_source_id", "identifier", name="uq_instrument_identifiers_data_source_id_identifier"
+            "data_source_id",
+            "identifier",
+            name="uq_instrument_identifiers_source_identifier",
         ),
         Index("ix_instrument_identifiers_instrument", "instrument_id", "data_source_id"),
     )
@@ -189,7 +194,8 @@ class InstrumentCoverage(Base, TimestampMixin):
     data_source_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("data_sources.id", ondelete="CASCADE"), nullable=False
     )
-    data_kind: Mapped[str] = mapped_column(String(32), nullable=False)  # prices|fundamentals|news|...
+    # prices | fundamentals | news | corporate_actions | macro
+    data_kind: Mapped[str] = mapped_column(String(32), nullable=False)
     resolution: Mapped[str | None] = mapped_column(String(8))
     first_observation: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     last_observation: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
@@ -210,7 +216,7 @@ class PeerGroup(Base, TimestampMixin):
     key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     label: Mapped[str] = mapped_column(String(200), nullable=False)
     basis: Mapped[str] = mapped_column(String(32), nullable=False, default="sector")
-    members: Mapped[list["PeerGroupMember"]] = relationship(
+    members: Mapped[list[PeerGroupMember]] = relationship(
         back_populates="group", cascade="all, delete-orphan"
     )
 
@@ -219,7 +225,10 @@ class PeerGroupMember(Base):
     __tablename__ = "peer_group_members"
     __table_args__ = (
         UniqueConstraint(
-            "group_id", "instrument_id", "valid_from", name="uq_peer_group_members_group_id_instrument_id_valid_from"
+            "group_id",
+            "instrument_id",
+            "valid_from",
+            name="uq_peer_group_members_group_instrument_valid_from",
         ),
     )
 

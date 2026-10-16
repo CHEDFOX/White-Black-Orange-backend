@@ -49,7 +49,7 @@ class EconomicSeries(Base, TimestampMixin):
     has_vintages: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
 
-    observations: Mapped[list["EconomicObservation"]] = relationship(
+    observations: Mapped[list[EconomicObservation]] = relationship(
         back_populates="series", cascade="all, delete-orphan"
     )
 
